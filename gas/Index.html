@@ -2,10 +2,10 @@
 <html lang="ja">
 
 <head>
+    <base target="_top">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="description" content="増員 CONTROL HUB 2.0 - スタッフ募集カレンダー">
-    <!-- キャッシュ無効化 -->
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
@@ -14,7 +14,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&display=swap"
         rel="stylesheet">
-    <link rel="stylesheet" href="css/styles.css">
+    <?!= include('Styles'); ?>
 </head>
 
 <body>
@@ -22,21 +22,16 @@
     <div class="login-screen" id="loginScreen">
         <div class="login-container">
             <div class="login-logo">
-                <img src="assets/logo.png" alt="ロゴ" class="login-logo-icon">
                 <h1 class="login-title">増員 CONTROL HUB</h1>
                 <span class="login-version">2.0</span>
             </div>
             <form class="login-form" id="loginForm">
                 <div class="login-input-group">
-                    <label for="staffName" class="login-label">メールアドレスを入力してください</label>
-                    <input type="email" id="staffName" class="login-input" placeholder="example@email.com" required
-                        autocomplete="email">
+                    <label for="password" class="login-label">パスワード</label>
+                    <input type="password" id="password" class="login-input" placeholder="パスワードを入力" required>
                 </div>
                 <p class="login-error" id="loginError"></p>
-                <button type="submit" class="login-btn" id="loginBtn">
-                    <span class="btn-text">ログイン</span>
-                    <span class="btn-spinner"></span>
-                </button>
+                <button type="submit" class="login-btn">ログイン</button>
             </form>
         </div>
     </div>
@@ -44,10 +39,7 @@
     <!-- ヘッダー（ログイン後に表示） -->
     <header class="header app-content hidden" id="appHeader">
         <div class="header-content">
-            <h1 class="logo">
-                <img src="assets/logo.png" alt="ロゴ" class="logo-icon">
-                増員 CONTROL HUB
-            </h1>
+            <h1 class="logo">増員 CONTROL HUB</h1>
             <span class="version-badge">2.0</span>
         </div>
     </header>
@@ -76,7 +68,6 @@
 
         <!-- カレンダーグリッド -->
         <div class="calendar-container">
-            <!-- カレンダーヘッダー（年月＋ナビ） -->
             <div class="calendar-top">
                 <div class="calendar-title-area">
                     <h2 class="current-month" id="currentMonth">2026年 1月</h2>
@@ -134,7 +125,6 @@
     <div class="drawer-overlay" id="drawerOverlay"></div>
     <div class="drawer" id="drawer">
         <div class="drawer-inner" id="drawerInner">
-            <!-- 閉じるボタン -->
             <button class="drawer-close" id="drawerClose">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -142,13 +132,11 @@
                 </svg>
             </button>
 
-            <!-- ヘッダー部分（セクション＋ホール名） -->
             <div class="drawer-header">
                 <span class="drawer-section-label" id="drawerSectionLabel">舞台</span>
                 <h2 class="drawer-title" id="drawerHallName">大ホール</h2>
             </div>
 
-            <!-- 情報グリッド -->
             <div class="drawer-info-grid">
                 <div class="info-item">
                     <span class="info-label">日付</span>
@@ -168,7 +156,6 @@
                 </div>
             </div>
 
-            <!-- 増員内容 -->
             <div class="drawer-content-section">
                 <h3 class="content-section-title">増員内容</h3>
                 <p class="drawer-description" id="drawerDescription">
@@ -176,7 +163,6 @@
                 </p>
             </div>
 
-            <!-- 定員状況メッセージ -->
             <div class="drawer-notice" id="drawerNotice">
                 <span class="notice-icon">ⓘ</span>
                 <div class="notice-text">
@@ -185,7 +171,6 @@
                 </div>
             </div>
 
-            <!-- 応募フォーム -->
             <div class="drawer-form-section">
                 <h3 class="form-section-title">応募フォーム</h3>
                 <form id="applyForm">
@@ -197,13 +182,6 @@
                         <label for="lineId" class="form-label">LINE ID *</label>
                         <input type="text" id="lineId" class="form-input" placeholder="your_line_id" required>
                         <span class="form-hint">※ 確定通知の送信に使用します</span>
-                    </div>
-                    <!-- 日付選択（連日イベント用、動的に表示） -->
-                    <div class="form-group date-selection-group hidden" id="dateSelectionGroup">
-                        <label class="form-label">応募日程 *</label>
-                        <div class="date-tabs" id="dateTabs">
-                            <!-- 動的に生成 -->
-                        </div>
                     </div>
                     <button type="submit" class="submit-btn" id="submitBtn">
                         応募する
@@ -223,175 +201,47 @@
         </div>
     </div>
 
-    <script src="js/calendar.js"></script>
-    <script src="js/drawer.js"></script>
+    <?!= include('Calendar'); ?>
+    <?!= include('Drawer'); ?>
+
     <script>
-        // スタッフ認証処理
+        // ログイン処理
         (function () {
-            // GAS Web App URL
-            const GAS_URL = 'https://script.google.com/macros/s/AKfycbyU4vAxhVYj0Nlqk1UB7IBb-qHNrFLCc2EPZAWilcmlLZ62E8oL6qb0GGq39tAxgPTXYA/exec';
-            const STORAGE_KEY = 'zouin_staff_name';
+            const PASSWORD = 'S!GMA';
+            const SESSION_KEY = 'zouin_logged_in';
 
             const loginScreen = document.getElementById('loginScreen');
             const loginForm = document.getElementById('loginForm');
             const loginError = document.getElementById('loginError');
-            const loginBtn = document.getElementById('loginBtn');
-            const staffNameInput = document.getElementById('staffName');
             const appContents = document.querySelectorAll('.app-content');
 
-            // アプリ表示
-            function showApp(staffName) {
+            function checkSession() {
+                const isLoggedIn = sessionStorage.getItem(SESSION_KEY);
+                if (isLoggedIn === 'true') {
+                    showApp();
+                }
+            }
+
+            function showApp() {
                 loginScreen.classList.add('hidden');
                 appContents.forEach(el => el.classList.remove('hidden'));
-                // グローバルに名前を保存（drawer.jsで使用）
-                window.loggedInStaffName = staffName;
             }
 
-            // ローディング状態の設定
-            function setLoading(isLoading) {
-                loginBtn.classList.toggle('loading', isLoading);
-                loginBtn.disabled = isLoading;
-                staffNameInput.disabled = isLoading;
-            }
-
-            // エラー表示
-            function showError(message) {
-                loginError.textContent = message;
-            }
-
-            // GAS APIで名簿照合（JSONP方式でCORS回避）
-            function verifyStaff(name) {
-                return new Promise((resolve) => {
-                    const callbackName = 'authCallback_' + Date.now();
-                    const params = new URLSearchParams({
-                        action: 'verifyStaff',
-                        name: name,
-                        callback: callbackName
-                    });
-
-                    // コールバック関数を登録
-                    window[callbackName] = function (data) {
-                        delete window[callbackName];
-                        document.body.removeChild(script);
-                        resolve(data);
-                    };
-
-                    // script要素で呼び出し
-                    const script = document.createElement('script');
-                    script.src = `${GAS_URL}?${params.toString()}`;
-                    script.onerror = function () {
-                        delete window[callbackName];
-                        document.body.removeChild(script);
-                        resolve({ success: false, error: 'ネットワークエラー' });
-                    };
-
-                    // タイムアウト処理
-                    setTimeout(() => {
-                        if (window[callbackName]) {
-                            delete window[callbackName];
-                            if (script.parentNode) {
-                                document.body.removeChild(script);
-                            }
-                            resolve({ success: false, error: 'タイムアウト' });
-                        }
-                    }, 10000);
-
-                    document.body.appendChild(script);
-                });
-            }
-
-            // 自動認証チェック（localStorageから）
-            async function checkSavedAuth() {
-                const savedEmail = localStorage.getItem(STORAGE_KEY);
-                if (!savedEmail) return;
-
-                // 保存されたメールアドレスを入力欄にセット
-                staffNameInput.value = savedEmail;
-                setLoading(true);
-
-                const result = await verifyStaff(savedEmail);
-                setLoading(false);
-
-                if (result.success && result.verified) {
-                    // B列の名前を保存・使用
-                    if (result.staffName) {
-                        localStorage.setItem('zouin_staff_display_name', result.staffName);
-                        window.loggedInStaffName = result.staffName;
-                    }
-                    showApp(result.staffName || savedEmail);
-                } else {
-                    // 保存された認証が無効な場合はクリア
-                    localStorage.removeItem(STORAGE_KEY);
-                    localStorage.removeItem('zouin_staff_display_name');
-                    staffNameInput.value = '';
-                    if (result.success && !result.verified) {
-                        // 名簿から削除された場合
-                        showError('アカウントの有効期限が切れたか、登録が解除されました。管理者に確認してください。');
-                    }
-                }
-            }
-
-            // 強制ログアウト（外部から呼び出し可能）
-            window.forceLogout = function (message) {
-                localStorage.removeItem(STORAGE_KEY);
-                localStorage.removeItem('zouin_staff_display_name');
-                window.loggedInStaffName = null;
-                loginScreen.classList.remove('hidden');
-                appContents.forEach(el => el.classList.add('hidden'));
-                staffNameInput.value = '';
-                showError(message || 'アカウントの有効期限が切れたか、登録が解除されました。管理者に確認してください。');
-            };
-
-            // リアルタイム権限チェック（外部から呼び出し可能）
-            window.checkPermission = async function () {
-                const savedName = localStorage.getItem(STORAGE_KEY);
-                if (!savedName) return false;
-
-                const result = await verifyStaff(savedName);
-                if (!result.success || !result.verified) {
-                    window.forceLogout();
-                    return false;
-                }
-                return true;
-            };
-
-            // ログインフォーム送信
-            loginForm.addEventListener('submit', async function (e) {
+            loginForm.addEventListener('submit', function (e) {
                 e.preventDefault();
-                const email = staffNameInput.value.trim();
+                const password = document.getElementById('password').value;
 
-                if (!email) {
-                    showError('メールアドレスを入力してください');
-                    return;
-                }
-
-                showError('');
-                setLoading(true);
-
-                const result = await verifyStaff(email);
-                setLoading(false);
-
-                if (result.success && result.verified) {
-                    // 認証成功: localStorageに保存してアプリ表示
-                    localStorage.setItem(STORAGE_KEY, email);
-                    // B列の名前も保存
-                    if (result.staffName) {
-                        localStorage.setItem('zouin_staff_display_name', result.staffName);
-                        window.loggedInStaffName = result.staffName;
-                    }
-                    showApp(result.staffName || email);
-                } else if (result.success && !result.verified) {
-                    // 名簿に存在しない
-                    showError('登録が確認できません。フォームから登録するか、管理者に連絡してください。');
+                if (password === PASSWORD) {
+                    sessionStorage.setItem(SESSION_KEY, 'true');
+                    showApp();
                 } else {
-                    // APIエラー
-                    showError('認証に失敗しました。しばらく待ってから再度お試しください。');
-                    console.error('API Error:', result.error);
+                    loginError.textContent = 'パスワードが正しくありません';
+                    document.getElementById('password').value = '';
+                    document.getElementById('password').focus();
                 }
             });
 
-            // 初期化: 保存された認証をチェック
-            checkSavedAuth();
+            checkSession();
         })();
     </script>
 </body>
