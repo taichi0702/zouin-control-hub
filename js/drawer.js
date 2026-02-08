@@ -394,19 +394,82 @@ async function handleFormSubmit(e) {
         return;
     }
 
-    const data = {
-        name: document.getElementById('userName').value,
-        lineId: document.getElementById('lineId').value,
-        event: currentSelectedEvent,
-        date: currentSelectedDate,
-        selectedDates: selectedDates.length > 0 ? selectedDates : null
-    };
+    const submitBtn = applyForm.querySelector('button[type="submit"]');
+    const originalBtnText = submitBtn.textContent;
+    submitBtn.textContent = '送信中...';
+    submitBtn.disabled = true;
 
-    console.log('応募データ:', data);
+    try {
+        const email = localStorage.getItem('zouin_staff_name') || '';
+        const staffName = localStorage.getItem('zouin_staff_display_name') || document.getElementById('userName').value;
 
-    // TODO: ここでGASに送信
-    // 今はダイアログを表示するだけ
-    showConfirmDialog();
+        const data = {
+            action: 'submitApplication',
+            email: email,
+            staffName: staffName,
+            lineId: document.getElementById('lineId').value,
+            eventTitle: currentSelectedEvent?.title || '',
+            hall: currentSelectedEvent?.extendedProps?.hall || '',
+            section: currentSelectedEvent?.extendedProps?.section || '',
+            date: currentSelectedDate,
+            selectedDates: selectedDates.length > 0 ? selectedDates.join(',') : currentSelectedDate,
+            sendLineNotification: true
+        };
+
+        console.log('応募データ:', data);
+
+        // GASに送信（JSONP方式）
+        const result = await submitToGAS(data);
+
+        if (result.success) {
+            showConfirmDialog();
+        } else {
+            alert('送信に失敗しました: ' + (result.error || '不明なエラー'));
+        }
+    } catch (error) {
+        console.error('送信エラー:', error);
+        alert('送信に失敗しました。もう一度お試しください。');
+    } finally {
+        submitBtn.textContent = originalBtnText;
+        submitBtn.disabled = false;
+    }
+}
+
+/**
+ * GASに申し込みデータを送信（JSONP方式）
+ */
+function submitToGAS(data) {
+    return new Promise((resolve) => {
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbyU4vAxhVYj0Nlqk1UB7IBb-qHNrFLCc2EPZAWilcmlLZ62E8oL6qb0GGq39tAxgPTXYA/exec';
+        const callbackName = 'submitCallback_' + Date.now();
+
+        const params = new URLSearchParams(data);
+        params.append('callback', callbackName);
+
+        window[callbackName] = function (response) {
+            delete window[callbackName];
+            document.body.removeChild(script);
+            resolve(response);
+        };
+
+        const script = document.createElement('script');
+        script.src = `${GAS_URL}?${params.toString()}`;
+        script.onerror = function () {
+            delete window[callbackName];
+            document.body.removeChild(script);
+            resolve({ success: false, error: 'ネットワークエラー' });
+        };
+
+        setTimeout(() => {
+            if (window[callbackName]) {
+                delete window[callbackName];
+                if (script.parentNode) document.body.removeChild(script);
+                resolve({ success: false, error: 'タイムアウト' });
+            }
+        }, 15000);
+
+        document.body.appendChild(script);
+    });
 }
 
 // イベントリスナー

@@ -53,7 +53,6 @@
         .status {
             text-align: center;
             padding: 20px;
-            margin-bottom: 20px;
         }
 
         .status.loading {
@@ -78,24 +77,63 @@
             line-height: 1.6;
         }
 
+        .form-section {
+            margin-top: 20px;
+        }
+
+        .form-label {
+            display: block;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 0.9rem;
+            margin-bottom: 8px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 14px 16px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            color: #fff;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        .form-input:focus {
+            border-color: #4ade80;
+        }
+
+        .form-input::placeholder {
+            color: rgba(255, 255, 255, 0.4);
+        }
+
         .user-info {
             background: rgba(255, 255, 255, 0.05);
             border-radius: 12px;
             padding: 20px;
-            margin-bottom: 20px;
+            margin: 20px 0;
+            display: flex;
+            align-items: center;
+            gap: 15px;
         }
 
         .user-info img {
-            width: 60px;
-            height: 60px;
+            width: 50px;
+            height: 50px;
             border-radius: 50%;
-            margin-bottom: 10px;
         }
 
         .user-info .name {
             color: #fff;
-            font-size: 1.2rem;
+            font-size: 1.1rem;
             font-weight: 600;
+        }
+
+        .user-info .uid {
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 0.75rem;
+            margin-top: 4px;
         }
 
         .btn {
@@ -108,6 +146,7 @@
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s ease;
+            margin-top: 15px;
         }
 
         .btn-primary {
@@ -120,14 +159,44 @@
             box-shadow: 0 10px 30px rgba(74, 222, 128, 0.3);
         }
 
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
         .btn-close {
             background: rgba(255, 255, 255, 0.1);
             color: #fff;
+        }
+
+        .error-message {
+            color: #f87171;
+            font-size: 0.85rem;
             margin-top: 10px;
+            text-align: center;
         }
 
         .hidden {
             display: none;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(0, 0, 0, 0.3);
+            border-radius: 50%;
+            border-top-color: #000;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
         }
     </style>
 </head>
@@ -136,7 +205,7 @@
     <div class="container">
         <div class="logo">
             <h1>📋 増員 CONTROL HUB</h1>
-            <p>LINE連携</p>
+            <p>LINE通知連携</p>
         </div>
 
         <!-- ローディング状態 -->
@@ -145,11 +214,27 @@
             <div class="status-text">LINE情報を取得中...</div>
         </div>
 
+        <!-- メールアドレス入力フォーム -->
+        <div id="emailForm" class="hidden">
+            <div class="status">
+                <div class="status-icon">📧</div>
+                <div class="status-text">カレンダーアプリで使用している<br>メールアドレスを入力してください</div>
+            </div>
+            <div id="lineUserInfo" class="user-info"></div>
+            <div class="form-section">
+                <label class="form-label">メールアドレス</label>
+                <input type="email" id="emailInput" class="form-input" placeholder="example@email.com" required>
+            </div>
+            <p id="formError" class="error-message hidden"></p>
+            <button id="submitBtn" class="btn btn-primary" onclick="submitEmail()">
+                連携する
+            </button>
+        </div>
+
         <!-- 成功状態 -->
         <div id="success" class="status success hidden">
             <div class="status-icon">✅</div>
-            <div class="status-text">LINE連携が完了しました！</div>
-            <div class="user-info" id="userInfo"></div>
+            <div class="status-text">LINE連携が完了しました！<br><br>申し込み時にLINEで通知が届きます。</div>
             <button class="btn btn-close" onclick="closeLiff()">閉じる</button>
         </div>
 
@@ -172,7 +257,9 @@
 
     <script>
         const LIFF_ID = '2009077734-ikkJ1w1D';
-        const GAS_URL = 'https://script.google.com/macros/s/AKfycbxpUELeFkAqo4zsDFLXCTlGek4OoEmH9ZhWoucbO6GL_J2HmOX-XO4ZnYRid1d6hxTr/exec';
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbyU4vAxhVYj0Nlqk1UB7IBb-qHNrFLCc2EPZAWilcmlLZ62E8oL6qb0GGq39tAxgPTXYA/exec';
+
+        let lineProfile = null;
 
         async function initializeLiff() {
             try {
@@ -191,14 +278,11 @@
                 }
 
                 // プロフィール取得
-                const profile = await liff.getProfile();
-                console.log('Profile:', profile);
+                lineProfile = await liff.getProfile();
+                console.log('Profile:', lineProfile);
 
-                // GASにLINE UIDを送信
-                await saveLineUid(profile);
-
-                // 成功表示
-                showSuccess(profile);
+                // メールアドレス入力フォームを表示
+                showEmailForm(lineProfile);
 
             } catch (error) {
                 console.error('LIFF Error:', error);
@@ -206,37 +290,74 @@
             }
         }
 
-        async function saveLineUid(profile) {
-            // ローカルストレージからメールアドレスを取得
-            const email = localStorage.getItem('zouin_staff_email') || '';
-            const staffName = localStorage.getItem('zouin_staff_display_name') || '';
+        function showEmailForm(profile) {
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('emailForm').classList.remove('hidden');
 
-            const params = new URLSearchParams({
-                action: 'saveLineUid',
-                lineUid: profile.userId,
-                displayName: profile.displayName,
-                email: email,
-                staffName: staffName
-            });
-
-            const response = await fetch(`${GAS_URL}?${params.toString()}`);
-            const result = await response.json();
-
-            if (!result.success) {
-                throw new Error(result.error || '保存に失敗しました');
-            }
-
-            return result;
+            document.getElementById('lineUserInfo').innerHTML = `
+                <img src="${profile.pictureUrl || ''}" alt="">
+                <div>
+                    <div class="name">${profile.displayName}</div>
+                    <div class="uid">LINE連携中</div>
+                </div>
+            `;
         }
 
-        function showSuccess(profile) {
-            document.getElementById('loading').classList.add('hidden');
-            document.getElementById('success').classList.remove('hidden');
+        async function submitEmail() {
+            const email = document.getElementById('emailInput').value.trim();
+            const submitBtn = document.getElementById('submitBtn');
+            const formError = document.getElementById('formError');
 
-            document.getElementById('userInfo').innerHTML = `
-                <img src="${profile.pictureUrl || ''}" alt="">
-                <div class="name">${profile.displayName}</div>
-            `;
+            formError.classList.add('hidden');
+
+            if (!email) {
+                formError.textContent = 'メールアドレスを入力してください';
+                formError.classList.remove('hidden');
+                return;
+            }
+
+            if (!email.includes('@')) {
+                formError.textContent = '正しいメールアドレスを入力してください';
+                formError.classList.remove('hidden');
+                return;
+            }
+
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner"></span>連携中...';
+
+            try {
+                const params = new URLSearchParams({
+                    action: 'linkLineToEmail',
+                    lineUid: lineProfile.userId,
+                    lineDisplayName: lineProfile.displayName,
+                    email: email
+                });
+
+                const response = await fetch(`${GAS_URL}?${params.toString()}`);
+                const result = await response.json();
+
+                if (result.success && result.linked) {
+                    showSuccess();
+                } else if (result.success && !result.linked) {
+                    formError.textContent = result.message || 'このメールアドレスはスタッフ名簿に登録されていません';
+                    formError.classList.remove('hidden');
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '連携する';
+                } else {
+                    throw new Error(result.error || '連携に失敗しました');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                formError.textContent = error.message;
+                formError.classList.remove('hidden');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '連携する';
+            }
+        }
+
+        function showSuccess() {
+            document.getElementById('emailForm').classList.add('hidden');
+            document.getElementById('success').classList.remove('hidden');
         }
 
         function showError(message) {
@@ -257,6 +378,15 @@
         function retry() {
             location.reload();
         }
+
+        // Enter キーで送信
+        document.addEventListener('DOMContentLoaded', function () {
+            document.getElementById('emailInput').addEventListener('keypress', function (e) {
+                if (e.key === 'Enter') {
+                    submitEmail();
+                }
+            });
+        });
 
         // 初期化
         initializeLiff();
