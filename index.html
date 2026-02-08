@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="description" content="増員 CONTROL HUB 2.0 - スタッフ募集カレンダー">
+    <!-- キャッシュ無効化 -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>増員 CONTROL HUB 2.0</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css">
+    <!-- LIFF SDK -->
+    <script src="https://static.line-scdn.net/liff/edge/versions/2.22.3/sdk.js"></script>
+</head>
+
+<body>
+    <!-- ログイン画面 -->
+    <div class="login-screen" id="loginScreen">
+        <div class="login-container">
+            <div class="login-logo">
+                <img src="assets/logo.png" alt="ロゴ" class="login-logo-icon">
+                <h1 class="login-title">増員 CONTROL HUB</h1>
+                <span class="login-version">2.0</span>
+            </div>
+            <!-- LINE認証中の表示 -->
+            <div id="liffLoading" class="login-loading">
+                <div class="btn-spinner"></div>
+                <p>LINE認証中...</p>
+            </div>
+
+            <!-- 初回登録フォーム（LINE UID未登録時） -->
+            <form class="login-form hidden" id="registerForm">
+                <div class="login-input-group">
+                    <label for="staffName" class="login-label">名前を入力してください</label>
+                    <input type="text" id="staffName" class="login-input" placeholder="山田 太郎" required>
+                </div>
+                <p class="login-error" id="loginError"></p>
+                <button type="submit" class="login-btn" id="loginBtn">
+                    <span class="btn-text">登録する</span>
+                    <span class="btn-spinner"></span>
+                </button>
+            </form>
+
+            <!-- LINE外アクセス時の案内 -->
+            <div id="notInLine" class="login-notice hidden">
+                <p>📱 LINEアプリからアクセスしてください</p>
+                <p class="sub">公式LINEのメニューから開いてください</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ヘッダー（ログイン後に表示） -->
+    <header class="header app-content hidden" id="appHeader">
+        <div class="header-content">
+            <h1 class="logo">
+                <img src="assets/logo.png" alt="ロゴ" class="logo-icon">
+                増員 CONTROL HUB
+            </h1>
+            <span class="version-badge">2.0</span>
+        </div>
+    </header>
+
+    <!-- メインコンテンツ（ログイン後に表示） -->
+    <main class="main-content app-content hidden" id="appMain">
+        <!-- 凡例 -->
+        <div class="legend">
+            <div class="legend-item">
+                <span class="legend-dot stage"></span>
+                <span>舞台</span>
+            </div>
+            <div class="legend-item">
+                <span class="legend-dot sound"></span>
+                <span>音響</span>
+            </div>
+            <div class="legend-item">
+                <span class="legend-dot lighting"></span>
+                <span>照明</span>
+            </div>
+            <div class="legend-item">
+                <span class="legend-dot multiple"></span>
+                <span>複数</span>
+            </div>
+        </div>
+
+        <!-- カレンダーグリッド -->
+        <div class="calendar-container">
+            <!-- カレンダーヘッダー（年月＋ナビ） -->
+            <div class="calendar-top">
+                <div class="calendar-title-area">
+                    <h2 class="current-month" id="currentMonth">2026年 1月</h2>
+                    <button class="today-btn" id="todayBtn">今日</button>
+                </div>
+                <div class="nav-buttons">
+                    <button class="nav-btn prev-btn" id="prevMonth" aria-label="前月">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <polyline points="15 18 9 12 15 6"></polyline>
+                        </svg>
+                    </button>
+                    <button class="nav-btn next-btn" id="nextMonth" aria-label="翌月">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <polyline points="9 18 15 12 9 6"></polyline>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <div class="calendar-header">
+                <div class="weekday sun">日</div>
+                <div class="weekday">月</div>
+                <div class="weekday">火</div>
+                <div class="weekday">水</div>
+                <div class="weekday">木</div>
+                <div class="weekday">金</div>
+                <div class="weekday sat">土</div>
+            </div>
+            <div class="calendar-grid" id="calendarGrid">
+                <!-- カレンダー日付がJSで挿入される -->
+            </div>
+        </div>
+    </main>
+
+    <!-- イベント選択モーダル -->
+    <div class="event-modal-overlay" id="eventModalOverlay"></div>
+    <div class="event-modal" id="eventModal">
+        <div class="event-modal-header">
+            <h3 class="event-modal-title" id="eventModalTitle">1月15日のイベント</h3>
+            <button class="event-modal-close" id="eventModalClose">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+        <div class="event-modal-list" id="eventModalList">
+            <!-- イベントリストがJSで挿入される -->
+        </div>
+    </div>
+
+    <!-- ドロワー（詳細画面） -->
+    <div class="drawer-overlay" id="drawerOverlay"></div>
+    <div class="drawer" id="drawer">
+        <div class="drawer-inner" id="drawerInner">
+            <!-- 閉じるボタン -->
+            <button class="drawer-close" id="drawerClose">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+
+            <!-- ヘッダー部分（セクション＋ホール名） -->
+            <div class="drawer-header">
+                <span class="drawer-section-label" id="drawerSectionLabel">舞台</span>
+                <h2 class="drawer-title" id="drawerHallName">大ホール</h2>
+            </div>
+
+            <!-- 情報グリッド -->
+            <div class="drawer-info-grid">
+                <div class="info-item">
+                    <span class="info-label">日付</span>
+                    <span class="info-value" id="drawerDate">2026年1月15日(水)</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">催事名</span>
+                    <span class="info-value" id="drawerEventName">春のコンサート</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">区分</span>
+                    <span class="info-value" id="drawerTime">全日</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">募集状況</span>
+                    <span class="info-value" id="drawerStatus">0 / 0名</span>
+                </div>
+            </div>
+
+            <!-- 増員内容 -->
+            <div class="drawer-content-section">
+                <h3 class="content-section-title">増員内容</h3>
+                <p class="drawer-description" id="drawerDescription">
+                    イベントの説明文がここに表示されます。
+                </p>
+            </div>
+
+            <!-- 定員状況メッセージ -->
+            <div class="drawer-notice" id="drawerNotice">
+                <span class="notice-icon">ⓘ</span>
+                <div class="notice-text">
+                    <span id="noticeTitle">募集中です</span><br>
+                    <span id="noticeMessage">ぜひご応募ください！</span>
+                </div>
+            </div>
+
+            <!-- 応募フォーム -->
+            <div class="drawer-form-section">
+                <h3 class="form-section-title">応募フォーム</h3>
+                <form id="applyForm">
+                    <div class="form-group">
+                        <label for="userName" class="form-label">お名前 *</label>
+                        <input type="text" id="userName" class="form-input" placeholder="山田 太郎" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="lineId" class="form-label">LINE ID *</label>
+                        <input type="text" id="lineId" class="form-input" placeholder="your_line_id" required>
+                        <span class="form-hint">※ 確定通知の送信に使用します</span>
+                    </div>
+                    <!-- 日付選択（連日イベント用、動的に表示） -->
+                    <div class="form-group date-selection-group hidden" id="dateSelectionGroup">
+                        <label class="form-label">応募日程 *</label>
+                        <div class="date-tabs" id="dateTabs">
+                            <!-- 動的に生成 -->
+                        </div>
+                    </div>
+                    <button type="submit" class="submit-btn" id="submitBtn">
+                        応募する
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 確認ダイアログ -->
+    <div class="confirm-dialog hidden" id="confirmDialog">
+        <div class="confirm-content">
+            <div class="confirm-icon">✅</div>
+            <h3 class="confirm-title">応募を受け付けました</h3>
+            <p class="confirm-message">確定までしばらくお待ちください。<br>LINEで通知をお送りします。</p>
+            <button class="confirm-btn" id="confirmClose">閉じる</button>
+        </div>
+    </div>
+
+    <script src="js/calendar.js"></script>
+    <script src="js/drawer.js"></script>
+    <script>
+        // LIFF認証処理
+        (function () {
+            const LIFF_ID = '2009077734-ikkJ1w1D';
+            const GAS_URL = 'https://script.google.com/macros/s/AKfycbyU4vAxhVYj0Nlqk1UB7IBb-qHNrFLCc2EPZAWilcmlLZ62E8oL6qb0GGq39tAxgPTXYA/exec';
+
+            const loginScreen = document.getElementById('loginScreen');
+            const liffLoading = document.getElementById('liffLoading');
+            const registerForm = document.getElementById('registerForm');
+            const notInLine = document.getElementById('notInLine');
+            const loginError = document.getElementById('loginError');
+            const loginBtn = document.getElementById('loginBtn');
+            const staffNameInput = document.getElementById('staffName');
+            const appContents = document.querySelectorAll('.app-content');
+
+            let lineProfile = null;
+
+            // アプリ表示
+            function showApp(staffName) {
+                loginScreen.classList.add('hidden');
+                appContents.forEach(el => el.classList.remove('hidden'));
+                window.loggedInStaffName = staffName;
+            }
+
+            // ローディング非表示
+            function hideLoading() {
+                liffLoading.classList.add('hidden');
+            }
+
+            // 登録フォーム表示
+            function showRegisterForm() {
+                hideLoading();
+                registerForm.classList.remove('hidden');
+            }
+
+            // LINE外アクセス表示
+            function showNotInLine() {
+                hideLoading();
+                notInLine.classList.remove('hidden');
+            }
+
+            // エラー表示
+            function showError(message) {
+                loginError.textContent = message;
+            }
+
+            // ローディング状態
+            function setLoading(isLoading) {
+                loginBtn.classList.toggle('loading', isLoading);
+                loginBtn.disabled = isLoading;
+                staffNameInput.disabled = isLoading;
+            }
+
+            // GAS APIでLINE UIDで認証チェック（JSONP方式）
+            function checkLineAuth(lineUid) {
+                return new Promise((resolve) => {
+                    const callbackName = 'lineAuthCallback_' + Date.now();
+                    const params = new URLSearchParams({
+                        action: 'verifyLineUid',
+                        lineUid: lineUid,
+                        callback: callbackName
+                    });
+
+                    window[callbackName] = function (data) {
+                        delete window[callbackName];
+                        document.body.removeChild(script);
+                        resolve(data);
+                    };
+
+                    const script = document.createElement('script');
+                    script.src = `${GAS_URL}?${params.toString()}`;
+                    script.onerror = function () {
+                        delete window[callbackName];
+                        document.body.removeChild(script);
+                        resolve({ success: false, error: 'ネットワークエラー' });
+                    };
+
+                    setTimeout(() => {
+                        if (window[callbackName]) {
+                            delete window[callbackName];
+                            if (script.parentNode) document.body.removeChild(script);
+                            resolve({ success: false, error: 'タイムアウト' });
+                        }
+                    }, 10000);
+
+                    document.body.appendChild(script);
+                });
+            }
+
+            // GAS APIで名前とLINE UIDを紐付け登録
+            function registerStaff(name, lineUid, displayName) {
+                return new Promise((resolve) => {
+                    const callbackName = 'registerCallback_' + Date.now();
+                    const params = new URLSearchParams({
+                        action: 'registerLineStaff',
+                        name: name,
+                        lineUid: lineUid,
+                        lineDisplayName: displayName,
+                        callback: callbackName
+                    });
+
+                    window[callbackName] = function (data) {
+                        delete window[callbackName];
+                        document.body.removeChild(script);
+                        resolve(data);
+                    };
+
+                    const script = document.createElement('script');
+                    script.src = `${GAS_URL}?${params.toString()}`;
+                    script.onerror = function () {
+                        delete window[callbackName];
+                        document.body.removeChild(script);
+                        resolve({ success: false, error: 'ネットワークエラー' });
+                    };
+
+                    setTimeout(() => {
+                        if (window[callbackName]) {
+                            delete window[callbackName];
+                            if (script.parentNode) document.body.removeChild(script);
+                            resolve({ success: false, error: 'タイムアウト' });
+                        }
+                    }, 10000);
+
+                    document.body.appendChild(script);
+                });
+            }
+
+            // LIFF初期化
+            async function initializeLiff() {
+                try {
+                    await liff.init({ liffId: LIFF_ID });
+
+                    // LINEアプリ内かチェック（開発時はスキップ可能）
+                    if (!liff.isInClient() && !liff.isLoggedIn()) {
+                        // 開発用: 外部ブラウザでもログインを試みる
+                        liff.login();
+                        return;
+                    }
+
+                    // ログインチェック
+                    if (!liff.isLoggedIn()) {
+                        liff.login();
+                        return;
+                    }
+
+                    // プロフィール取得
+                    lineProfile = await liff.getProfile();
+                    console.log('LINE Profile:', lineProfile);
+
+                    // GASでLINE UIDが登録済みかチェック
+                    const authResult = await checkLineAuth(lineProfile.userId);
+
+                    if (authResult.success && authResult.verified) {
+                        // 登録済み → アプリ表示
+                        localStorage.setItem('zouin_line_uid', lineProfile.userId);
+                        localStorage.setItem('zouin_staff_display_name', authResult.staffName);
+                        window.loggedInStaffName = authResult.staffName;
+                        showApp(authResult.staffName);
+                    } else {
+                        // 未登録 → 名前入力フォーム表示
+                        showRegisterForm();
+                    }
+
+                } catch (error) {
+                    console.error('LIFF Error:', error);
+                    hideLoading();
+                    showError('LINE認証に失敗しました: ' + error.message);
+                }
+            }
+
+            // 登録フォーム送信
+            registerForm.addEventListener('submit', async function (e) {
+                e.preventDefault();
+                const name = staffNameInput.value.trim();
+
+                if (!name) {
+                    showError('名前を入力してください');
+                    return;
+                }
+
+                if (!lineProfile) {
+                    showError('LINE情報が取得できません。再度お試しください。');
+                    return;
+                }
+
+                showError('');
+                setLoading(true);
+
+                const result = await registerStaff(name, lineProfile.userId, lineProfile.displayName);
+                setLoading(false);
+
+                if (result.success && result.verified) {
+                    localStorage.setItem('zouin_line_uid', lineProfile.userId);
+                    localStorage.setItem('zouin_staff_display_name', result.staffName);
+                    window.loggedInStaffName = result.staffName;
+                    showApp(result.staffName);
+                } else if (result.success && !result.verified) {
+                    showError('スタッフ名簿に登録されていません。管理者に連絡してください。');
+                } else {
+                    showError('登録に失敗しました: ' + (result.error || '不明なエラー'));
+                }
+            });
+
+            // 強制ログアウト
+            window.forceLogout = function (message) {
+                localStorage.removeItem('zouin_line_uid');
+                localStorage.removeItem('zouin_staff_display_name');
+                window.loggedInStaffName = null;
+                loginScreen.classList.remove('hidden');
+                appContents.forEach(el => el.classList.add('hidden'));
+                showError(message || 'セッションが切れました。再度アクセスしてください。');
+                liffLoading.classList.remove('hidden');
+                registerForm.classList.add('hidden');
+                initializeLiff();
+            };
+
+            // 初期化
+            initializeLiff();
+        })();
+    </script>
+</body>
+
+</html>
