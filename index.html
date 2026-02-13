@@ -190,17 +190,30 @@
                 <h3 class="form-section-title">応募フォーム</h3>
                 <form id="applyForm">
                     <div class="form-group">
-                        <label for="userName" class="form-label">お名前 *</label>
-                        <input type="text" id="userName" class="form-input" placeholder="山田 太郎" required>
+                        <label for="userName" class="form-label">お名前</label>
+                        <input type="text" id="userName" class="form-input autofilled" placeholder="山田 太郎" readonly
+                            required>
+                        <span class="form-hint autofill-hint">🔗 ログイン情報から自動入力</span>
                     </div>
                     <div class="form-group">
                         <label for="staffHall" class="form-label">所属ホール *</label>
-                        <input type="text" id="staffHall" class="form-input" placeholder="所属ホール" required>
-                        <span class="form-hint">※ 異動があった場合は変更してください</span>
+                        <div class="autofill-field">
+                            <input type="text" id="staffHall" class="form-input autofilled" placeholder="所属ホール" readonly
+                                required>
+                            <button type="button" class="edit-field-btn" onclick="toggleEdit(this)"
+                                title="変更する">✏️</button>
+                        </div>
+                        <span class="form-hint autofill-hint">🔗 ログイン情報から自動入力</span>
                     </div>
                     <div class="form-group">
                         <label for="staffSection" class="form-label">セクション *</label>
-                        <input type="text" id="staffSection" class="form-input" placeholder="セクション" required>
+                        <div class="autofill-field">
+                            <input type="text" id="staffSection" class="form-input autofilled" placeholder="セクション"
+                                readonly required>
+                            <button type="button" class="edit-field-btn" onclick="toggleEdit(this)"
+                                title="変更する">✏️</button>
+                        </div>
+                        <span class="form-hint autofill-hint">🔗 ログイン情報から自動入力</span>
                     </div>
                     <!-- 日付選択（連日イベント用、動的に表示） -->
                     <div class="form-group date-selection-group hidden" id="dateSelectionGroup">
@@ -227,6 +240,24 @@
         </div>
     </div>
 
+    <script>
+        // 自動入力フィールドの編集切り替え
+        function toggleEdit(btn) {
+            const input = btn.parentElement.querySelector('.form-input');
+            if (input.readOnly) {
+                input.readOnly = false;
+                input.focus();
+                btn.classList.add('editing');
+                btn.textContent = '🔒';
+                btn.title = '元に戻す';
+            } else {
+                input.readOnly = true;
+                btn.classList.remove('editing');
+                btn.textContent = '✏️';
+                btn.title = '変更する';
+            }
+        }
+    </script>
     <script src="js/calendar.js"></script>
     <script src="js/drawer.js"></script>
     <script>
