@@ -421,12 +421,15 @@
                 const result = await verifyStaff(savedEmail);
                 setLoading(false);
 
+                console.log('verifyStaff応答:', JSON.stringify(result));
+
                 if (result.success && result.verified) {
                     // B列の名前を保存・使用
                     if (result.staffName) {
                         localStorage.setItem('zouin_staff_display_name', result.staffName);
                         window.loggedInStaffName = result.staffName;
                     }
+                    console.log('staffHall:', result.staffHall, 'staffSection:', result.staffSection);
                     showApp(result.staffName || savedEmail, result.staffHall, result.staffSection);
                 } else {
                     // 保存された認証が無効な場合はクリア
