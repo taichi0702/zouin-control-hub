@@ -194,9 +194,13 @@
                         <input type="text" id="userName" class="form-input" placeholder="山田 太郎" required>
                     </div>
                     <div class="form-group">
-                        <label for="lineId" class="form-label">LINE ID *</label>
-                        <input type="text" id="lineId" class="form-input" placeholder="your_line_id" required>
-                        <span class="form-hint">※ 確定通知の送信に使用します</span>
+                        <label for="staffHall" class="form-label">所属ホール *</label>
+                        <input type="text" id="staffHall" class="form-input" placeholder="所属ホール" required>
+                        <span class="form-hint">※ 異動があった場合は変更してください</span>
+                    </div>
+                    <div class="form-group">
+                        <label for="staffSection" class="form-label">セクション *</label>
+                        <input type="text" id="staffSection" class="form-input" placeholder="セクション" required>
                     </div>
                     <!-- 日付選択（連日イベント用、動的に表示） -->
                     <div class="form-group date-selection-group hidden" id="dateSelectionGroup">
@@ -240,11 +244,85 @@
             const appContents = document.querySelectorAll('.app-content');
 
             // アプリ表示
-            function showApp(staffName) {
+            function showApp(staffName, staffHall, staffSection) {
                 loginScreen.classList.add('hidden');
                 appContents.forEach(el => el.classList.remove('hidden'));
                 // グローバルに名前を保存（drawer.jsで使用）
                 window.loggedInStaffName = staffName;
+
+                // お名前フィールドを自動入力
+                const userNameInput = document.getElementById('userName');
+                if (userNameInput) userNameInput.value = staffName;
+
+                // 所属ホール・セクションをフォームに自動入力
+                const hallSelect = document.getElementById('staffHall');
+                const sectionSelect = document.getElementById('staffSection');
+                if (hallSelect && staffHall) hallSelect.value = staffHall;
+                if (sectionSelect && staffSection) sectionSelect.value = staffSection;
+            }
+
+            // スタッフプロフィールを取得してフォームに自動入力
+            async function loadStaffProfile() {
+                const email = localStorage.getItem(STORAGE_KEY);
+                if (!email) return;
+
+                try {
+                    const result = await fetchFromGAS({
+                        action: 'getStaffProfile',
+                        email: email
+                    });
+
+                    if (result.success && result.found) {
+                        const hallSelect = document.getElementById('staffHall');
+                        const sectionSelect = document.getElementById('staffSection');
+
+                        if (hallSelect && result.staffHall) {
+                            hallSelect.value = result.staffHall;
+                        }
+                        if (sectionSelect && result.staffSection) {
+                            sectionSelect.value = result.staffSection;
+                        }
+
+                        // localStorageにも保存
+                        localStorage.setItem('zouin_staff_hall', result.staffHall || '');
+                        localStorage.setItem('zouin_staff_section', result.staffSection || '');
+                    }
+                } catch (error) {
+                    console.error('プロフィール取得エラー:', error);
+                }
+            }
+
+            // GAS API呼び出し汎用関数（JSONP方式）
+            function fetchFromGAS(params) {
+                return new Promise((resolve) => {
+                    const callbackName = 'gasCallback_' + Date.now();
+                    const urlParams = new URLSearchParams(params);
+                    urlParams.append('callback', callbackName);
+
+                    window[callbackName] = function (data) {
+                        delete window[callbackName];
+                        document.body.removeChild(script);
+                        resolve(data);
+                    };
+
+                    const script = document.createElement('script');
+                    script.src = `${GAS_URL}?${urlParams.toString()}`;
+                    script.onerror = function () {
+                        delete window[callbackName];
+                        document.body.removeChild(script);
+                        resolve({ success: false, error: 'ネットワークエラー' });
+                    };
+
+                    setTimeout(() => {
+                        if (window[callbackName]) {
+                            delete window[callbackName];
+                            if (script.parentNode) document.body.removeChild(script);
+                            resolve({ success: false, error: 'タイムアウト' });
+                        }
+                    }, 10000);
+
+                    document.body.appendChild(script);
+                });
             }
 
             // ローディング状態の設定
@@ -318,7 +396,7 @@
                         localStorage.setItem('zouin_staff_display_name', result.staffName);
                         window.loggedInStaffName = result.staffName;
                     }
-                    showApp(result.staffName || savedEmail);
+                    showApp(result.staffName || savedEmail, result.staffHall, result.staffSection);
                 } else {
                     // 保存された認証が無効な場合はクリア
                     localStorage.removeItem(STORAGE_KEY);
@@ -379,7 +457,7 @@
                         localStorage.setItem('zouin_staff_display_name', result.staffName);
                         window.loggedInStaffName = result.staffName;
                     }
-                    showApp(result.staffName || email);
+                    showApp(result.staffName || email, result.staffHall, result.staffSection);
                 } else if (result.success && !result.verified) {
                     // 名簿に存在しない
                     showError('登録が確認できません。フォームから登録するか、管理者に連絡してください。');
