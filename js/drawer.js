@@ -383,7 +383,6 @@ async function handleFormSubmit(e) {
     if (window.checkPermission) {
         const hasPermission = await window.checkPermission();
         if (!hasPermission) {
-            // 権限がない場合は強制ログアウト済み
             return;
         }
     }
@@ -402,16 +401,21 @@ async function handleFormSubmit(e) {
     try {
         const email = localStorage.getItem('zouin_staff_name') || '';
         const staffName = localStorage.getItem('zouin_staff_display_name') || document.getElementById('userName').value;
+        const staffHall = document.getElementById('staffHall').value;
+        const staffSection = document.getElementById('staffSection').value;
+        const eventTitle = currentSelectedEvent?.title || '';
+        const hall = currentSelectedEvent?.extendedProps?.hall || '';
+        const dates = selectedDates.length > 0 ? selectedDates.join(', ') : currentSelectedDate;
 
         const data = {
             action: 'submitApplication',
             email: email,
             staffName: staffName,
-            staffHall: document.getElementById('staffHall').value,
-            staffSection: document.getElementById('staffSection').value,
-            eventTitle: currentSelectedEvent?.title || '',
-            hall: currentSelectedEvent?.extendedProps?.hall || '',
-            section: currentSelectedEvent?.extendedProps?.section || '',
+            staffHall: staffHall,
+            staffSection: staffSection,
+            eventTitle: eventTitle,
+            hall: hall,
+            section: staffSection,
             date: currentSelectedDate,
             selectedDates: selectedDates.length > 0 ? selectedDates.join(',') : currentSelectedDate,
             sendLineNotification: true
@@ -423,7 +427,12 @@ async function handleFormSubmit(e) {
         const result = await submitToGAS(data);
 
         if (result.success) {
-            showConfirmDialog();
+            // LINE公式アカウントにメッセージを送信するURLを生成
+            const lineMessage = buildLineMessage(staffHall, staffName, staffSection, dates, hall);
+            const lineUrl = 'https://line.me/R/oaMessage/@320ledlj/?' + encodeURIComponent(lineMessage);
+
+            // 確認ダイアログ表示後にLINEを開く
+            showConfirmDialogWithLine(lineUrl);
         } else {
             alert('送信に失敗しました: ' + (result.error || '不明なエラー'));
         }
@@ -434,6 +443,51 @@ async function handleFormSubmit(e) {
         submitBtn.textContent = originalBtnText;
         submitBtn.disabled = false;
     }
+}
+
+/**
+ * LINEプリセットメッセージを生成
+ */
+function buildLineMessage(staffHall, staffName, staffSection, dates, eventHall) {
+    return `申し込み内容
+
+【所属ホール名】${staffHall}
+【お名前】${staffName}
+【ご自身のセクション】${staffSection}
+【増員希望の日にち】${dates}
+【増員希望の事業所】${eventHall}`;
+}
+
+/**
+ * LINE送信付き確認ダイアログを表示
+ */
+function showConfirmDialogWithLine(lineUrl) {
+    const dialog = document.getElementById('confirmDialog');
+    const messageEl = dialog.querySelector('.confirm-message');
+
+    // メッセージを更新
+    messageEl.innerHTML = `
+        応募を受け付けました。<br><br>
+        <strong>LINE公式に申し込み内容を送信してください。</strong><br>
+        下のボタンを押すとLINEが開きます。<br>
+        メッセージが入力された状態で開くので、<br>
+        <strong>「送信」を押すだけ</strong>でOKです。
+    `;
+
+    // LINEボタンを追加
+    let lineBtn = dialog.querySelector('.line-send-btn');
+    if (!lineBtn) {
+        lineBtn = document.createElement('a');
+        lineBtn.className = 'line-send-btn';
+        lineBtn.style.cssText = 'display:block;background:#06C755;color:#fff;text-align:center;padding:14px;border-radius:8px;font-weight:bold;font-size:16px;text-decoration:none;margin:12px 0 8px;';
+        const closeBtn = dialog.querySelector('.confirm-btn');
+        closeBtn.parentNode.insertBefore(lineBtn, closeBtn);
+    }
+    lineBtn.href = lineUrl;
+    lineBtn.target = '_blank';
+    lineBtn.textContent = '📱 LINEで送信する';
+
+    dialog.classList.remove('hidden');
 }
 
 /**
