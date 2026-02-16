@@ -7,7 +7,7 @@
 // ============================================
 const API_CONFIG = {
     // GAS WebアプリURL
-    GAS_URL: 'https://script.google.com/macros/s/AKfycbyU4vAxhVYj0Nlqk1UB7IBb-qHNrFLCc2EPZAWilcmlLZ62E8oL6qb0GGq39tAxgPTXYA/exec',
+    GAS_URL: 'https://script.google.com/macros/s/AKfycbzfSgWz8ECzu5LYj6ImAQ9pLPwSTTnkv0Mw3BGdF7PDQuSbiTMcEdAtp2JBrG6Fd7mCiQ/exec',
 
     // テストモード（falseでAPIからデータを取得）
     USE_SAMPLE_DATA: false
