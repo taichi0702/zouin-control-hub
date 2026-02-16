@@ -251,7 +251,7 @@
             const appContents = document.querySelectorAll('.app-content');
 
             // アプリ表示
-            function showApp(staffName, staffHall, staffSection) {
+            function showApp(staffName) {
                 loginScreen.classList.add('hidden');
                 appContents.forEach(el => el.classList.remove('hidden'));
                 // グローバルに名前を保存（drawer.jsで使用）
@@ -261,11 +261,8 @@
                 const userNameInput = document.getElementById('userName');
                 if (userNameInput) userNameInput.value = staffName;
 
-                // 所属ホール・セクションをフォームに自動入力
-                const hallSelect = document.getElementById('staffHall');
-                const sectionSelect = document.getElementById('staffSection');
-                if (hallSelect && staffHall) hallSelect.value = staffHall;
-                if (sectionSelect && staffSection) sectionSelect.value = staffSection;
+                // 所属情報をAPIから取得して自動入力
+                loadStaffProfile();
             }
 
             // スタッフプロフィールを取得してフォームに自動入力
@@ -274,20 +271,23 @@
                 if (!email) return;
 
                 try {
+                    console.log('所属情報を取得中...');
                     const result = await fetchFromGAS({
-                        action: 'getStaffProfile',
+                        action: 'getStaffInfo',
                         email: email
                     });
 
-                    if (result.success && result.found) {
-                        const hallSelect = document.getElementById('staffHall');
-                        const sectionSelect = document.getElementById('staffSection');
+                    console.log('所属情報の応答:', JSON.stringify(result));
 
-                        if (hallSelect && result.staffHall) {
-                            hallSelect.value = result.staffHall;
+                    if (result.success && result.found) {
+                        const hallInput = document.getElementById('staffHall');
+                        const sectionInput = document.getElementById('staffSection');
+
+                        if (hallInput && result.staffHall) {
+                            hallInput.value = result.staffHall;
                         }
-                        if (sectionSelect && result.staffSection) {
-                            sectionSelect.value = result.staffSection;
+                        if (sectionInput && result.staffSection) {
+                            sectionInput.value = result.staffSection;
                         }
 
                         // localStorageにも保存
@@ -295,7 +295,7 @@
                         localStorage.setItem('zouin_staff_section', result.staffSection || '');
                     }
                 } catch (error) {
-                    console.error('プロフィール取得エラー:', error);
+                    console.error('所属情報取得エラー:', error);
                 }
             }
 
@@ -406,7 +406,7 @@
                         window.loggedInStaffName = result.staffName;
                     }
                     console.log('staffHall:', result.staffHall, 'staffSection:', result.staffSection);
-                    showApp(result.staffName || savedEmail, result.staffHall, result.staffSection);
+                    showApp(result.staffName || savedEmail);
                 } else {
                     // 保存された認証が無効な場合はクリア
                     localStorage.removeItem(STORAGE_KEY);
@@ -467,7 +467,7 @@
                         localStorage.setItem('zouin_staff_display_name', result.staffName);
                         window.loggedInStaffName = result.staffName;
                     }
-                    showApp(result.staffName || email, result.staffHall, result.staffSection);
+                    showApp(result.staffName || email);
                 } else if (result.success && !result.verified) {
                     // 名簿に存在しない
                     showError('登録が確認できません。フォームから登録するか、管理者に連絡してください。');
