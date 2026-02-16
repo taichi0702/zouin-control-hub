@@ -446,16 +446,34 @@ async function handleFormSubmit(e) {
 }
 
 /**
+ * 日付を○月○日形式に変換
+ */
+function formatDateJP(dateStr) {
+    if (!dateStr) return '';
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    return `${d.getMonth() + 1}月${d.getDate()}日`;
+}
+
+/**
  * LINEプリセットメッセージを生成
  */
 function buildLineMessage(staffHall, staffName, staffSection, dates, eventHall) {
-    return `申し込み内容
+    // 日付を○月○日形式に変換し、複数日は改行で表示
+    const dateList = dates.split(',').map(d => formatDateJP(d.trim()));
+    const formattedDates = dateList.length > 1
+        ? '\n' + dateList.map(d => `　　　　　　　　　${d}`).join('\n')
+        : dateList[0];
 
-【所属ホール名】${staffHall}
-【お名前】${staffName}
-【ご自身のセクション】${staffSection}
-【増員希望の日にち】${dates}
-【増員希望の事業所】${eventHall}`;
+    return `下記の内容で申し込みます。
+
+■ スタッフ情報
+・［所属ホール］　：${staffHall}
+・［ お名前］　　　：${staffName}
+・［ セクション］　：${staffSection}
+■ 申し込み内容
+・［増員日］　　　：${formattedDates}
+・［希望事業所］　：${eventHall}`;
 }
 
 /**
@@ -467,8 +485,7 @@ function showConfirmDialogWithLine(lineUrl) {
 
     // メッセージを更新
     messageEl.innerHTML = `
-        応募を受け付けました。<br><br>
-        <strong>LINE公式に申し込み内容を送信してください。</strong><br>
+        <strong>CONTROL HUBに申し込み内容を送信してください。</strong><br><br>
         下のボタンを押すとLINEが開きます。<br>
         メッセージが入力された状態で開くので、<br>
         <strong>「送信」を押すだけ</strong>でOKです。
