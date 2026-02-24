@@ -136,8 +136,19 @@ function openDrawer(date, events) {
     const timeSlotText = timeSlots[event.timeSlot] || '全日';
     drawerTime.textContent = timeSlotText;
 
-    // 募集状況
-    drawerStatus.textContent = `${event.applied} / ${event.capacity}名`;
+    // 募集人数（セクション別表示）
+    if (event.section === 'multiple' && event.parsedSections) {
+        const sectionLabels = [];
+        const abbrevMap = { stage: '舞', sound: '音', lighting: '照' };
+        for (const [key, count] of Object.entries(event.parsedSections)) {
+            if (count > 0) {
+                sectionLabels.push(`${abbrevMap[key] || key}/${count}`);
+            }
+        }
+        drawerStatus.textContent = sectionLabels.length > 0 ? sectionLabels.join('　') : `${event.capacity}名`;
+    } else {
+        drawerStatus.textContent = `${event.capacity}名`;
+    }
 
     // 説明文（GASからのdescriptionがある場合はそれを使用）
     if (event.description) {
@@ -356,6 +367,14 @@ function closeDrawer() {
 
     // フォームをリセット
     applyForm.reset();
+
+    // リセット後にログイン情報を復元
+    const savedName = window.loggedInStaffName || localStorage.getItem('zouin_staff_display_name');
+    const savedHall = localStorage.getItem('zouin_staff_hall');
+    const savedSection = localStorage.getItem('zouin_staff_section');
+    if (savedName) document.getElementById('userName').value = savedName;
+    if (savedHall) document.getElementById('staffHall').value = savedHall;
+    if (savedSection) document.getElementById('staffSection').value = savedSection;
 }
 
 /**
