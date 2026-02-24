@@ -32,6 +32,7 @@ const eventModalClose = document.getElementById('eventModalClose');
 let currentSelectedDate = null;
 let currentSelectedEvent = null;
 let selectedDates = []; // 選択された日付（連日イベント用）
+let recruitmentStatuses = {}; // 募集完了ステータスキャッシュ
 
 // 日付選択関連のDOM要素
 const dateSelectionGroup = document.getElementById('dateSelectionGroup');
@@ -171,6 +172,61 @@ function openDrawer(date, events) {
 
     // 日付選択の表示/非表示を設定
     setupDateSelection(event);
+
+    // イベントキーを生成
+    const eventKey = `${event.title}_${event.startDate}`;
+    currentSelectedEvent.eventKey = eventKey;
+
+    // 募集完了状態の確認
+    const isClosed = recruitmentStatuses[eventKey] === true;
+    const formSection = document.querySelector('.drawer-form-section');
+    const noticeEl = document.getElementById('drawerNotice');
+
+    // 既存の管理者ボタンとオーバーレイをクリア
+    const existingAdminBtn = document.getElementById('adminRecruitBtn');
+    if (existingAdminBtn) existingAdminBtn.remove();
+    const existingOverlay = document.getElementById('closedOverlay');
+    if (existingOverlay) existingOverlay.remove();
+
+    if (isClosed) {
+        // 募集完了: フォームを非表示、オーバーレイ表示
+        if (formSection) formSection.style.display = 'none';
+        if (noticeEl) noticeEl.style.display = 'none';
+
+        const overlay = document.createElement('div');
+        overlay.id = 'closedOverlay';
+        overlay.style.cssText = 'text-align:center;padding:32px 16px;margin:16px 0;background:rgba(255,59,48,0.08);border-radius:12px;border:1px solid rgba(255,59,48,0.2);';
+        overlay.innerHTML = `
+            <div style="font-size:40px;margin-bottom:8px;">⛔</div>
+            <div style="font-size:16px;font-weight:700;color:#ff3b30;margin-bottom:4px;">募集は終了しました</div>
+            <div style="font-size:13px;color:#888;">このイベントの募集は終了しています。</div>
+        `;
+        const drawerBody = document.querySelector('.drawer-body');
+        drawerBody.appendChild(overlay);
+    } else {
+        // 募集中: フォームを表示
+        if (formSection) formSection.style.display = '';
+        if (noticeEl) noticeEl.style.display = '';
+    }
+
+    // 管理者ボタン表示（自分のホールのみ）
+    const isAdmin = window.isAdmin || localStorage.getItem('zouin_is_admin') === 'true';
+    const staffHall = localStorage.getItem('zouin_staff_hall');
+    const eventHall = event.hall || '';
+
+    if (isAdmin && staffHall && eventHall === staffHall) {
+        const adminBtn = document.createElement('button');
+        adminBtn.id = 'adminRecruitBtn';
+        adminBtn.type = 'button';
+        const btnColor = isClosed ? '#34c759' : '#ff3b30';
+        const btnText = isClosed ? '▶ 募集を再開する' : '⬛ 募集完了にする';
+        adminBtn.style.cssText = `display:block;width:100%;padding:12px;margin:12px 0 0;border:2px solid ${btnColor};background:transparent;color:${btnColor};font-weight:700;font-size:14px;border-radius:8px;cursor:pointer;`;
+        adminBtn.textContent = btnText;
+        adminBtn.onclick = () => toggleRecruitment(eventKey, eventHall, !isClosed);
+
+        const drawerBody = document.querySelector('.drawer-body');
+        drawerBody.appendChild(adminBtn);
+    }
 
     // オーバーレイを表示
     drawerOverlay.classList.add('active');
@@ -356,6 +412,106 @@ function updateSelectedDates() {
 
     console.log('選択された日付:', selectedDates);
 }
+
+/**
+ * 募集完了ステータスを切り替え（管理者用）
+ */
+async function toggleRecruitment(eventKey, hall, newStatus) {
+    const email = localStorage.getItem('zouin_staff_name') || '';
+    const confirmMsg = newStatus ? 'この募集を完了にしますか？' : 'この募集を再開しますか？';
+    if (!confirm(confirmMsg)) return;
+
+    const btn = document.getElementById('adminRecruitBtn');
+    if (btn) {
+        btn.textContent = '処理中...';
+        btn.disabled = true;
+    }
+
+    try {
+        const GAS_URL = window.calendarApp?.API_CONFIG?.GAS_URL ||
+            document.querySelector('[data-gas-url]')?.dataset.gasUrl ||
+            'https://script.google.com/macros/s/AKfycbzfSgWz8ECzu5LYj6ImAQ9pLPwSTTnkv0Mw3BGdF7PDQuSbiTMcEdAtp2JBrG6Fd7mCiQ/exec';
+
+        const result = await new Promise((resolve) => {
+            const callbackName = 'recruitCallback_' + Date.now();
+            window[callbackName] = (data) => {
+                delete window[callbackName];
+                resolve(data);
+            };
+            const params = new URLSearchParams({
+                action: 'toggleRecruitment',
+                eventKey: eventKey,
+                hall: hall,
+                status: newStatus.toString(),
+                email: email,
+                callback: callbackName
+            });
+            const script = document.createElement('script');
+            script.src = GAS_URL + '?' + params.toString();
+            script.onerror = () => resolve({ success: false, error: '通信エラー' });
+            document.body.appendChild(script);
+        });
+
+        if (result.success) {
+            recruitmentStatuses[eventKey] = result.closed;
+            // ドロワーを再描画
+            if (currentSelectedEvent) {
+                closeDrawer();
+                setTimeout(() => {
+                    openDrawer(currentSelectedDate, [currentSelectedEvent]);
+                }, 100);
+            }
+            // カレンダーも更新
+            if (window.calendarApp?.refreshCalendar) {
+                window.calendarApp.refreshCalendar();
+            }
+        } else {
+            alert('エラー: ' + (result.error || '不明なエラー'));
+        }
+    } catch (error) {
+        console.error('募集完了切替エラー:', error);
+        alert('エラーが発生しました。');
+    }
+}
+
+/**
+ * 募集完了ステータスを読み込み（起動時に呼ばれる）
+ */
+async function loadRecruitmentStatuses() {
+    try {
+        const GAS_URL = window.calendarApp?.API_CONFIG?.GAS_URL ||
+            'https://script.google.com/macros/s/AKfycbzfSgWz8ECzu5LYj6ImAQ9pLPwSTTnkv0Mw3BGdF7PDQuSbiTMcEdAtp2JBrG6Fd7mCiQ/exec';
+
+        const result = await new Promise((resolve) => {
+            const callbackName = 'statusCallback_' + Date.now();
+            window[callbackName] = (data) => {
+                delete window[callbackName];
+                resolve(data);
+            };
+            const params = new URLSearchParams({
+                action: 'getRecruitmentStatuses',
+                callback: callbackName
+            });
+            const script = document.createElement('script');
+            script.src = GAS_URL + '?' + params.toString();
+            script.onerror = () => resolve({ success: false });
+            document.body.appendChild(script);
+        });
+
+        if (result.success && result.statuses) {
+            recruitmentStatuses = result.statuses;
+            console.log('募集完了ステータス:', recruitmentStatuses);
+        }
+    } catch (error) {
+        console.error('募集完了ステータス取得エラー:', error);
+    }
+}
+
+// 起動時に募集完了ステータスを読み込み
+document.addEventListener('DOMContentLoaded', () => {
+    loadRecruitmentStatuses();
+});
+
 
 /**
  * ドロワーを閉じる

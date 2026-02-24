@@ -557,6 +557,11 @@ window.calendarApp = {
     sectionInfo,
     timeSlots,
     formatDateJP,
+    API_CONFIG: API_CONFIG,
+    refreshCalendar: async () => {
+        await fetchEventsFromAPI();
+        renderCalendar();
+    },
     refreshEvents: async () => {
         await fetchEventsFromAPI();
         renderCalendar();

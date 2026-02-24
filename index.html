@@ -293,6 +293,11 @@
                         // localStorageにも保存
                         localStorage.setItem('zouin_staff_hall', result.staffHall || '');
                         localStorage.setItem('zouin_staff_section', result.staffSection || '');
+
+                        // 管理者フラグを保存
+                        localStorage.setItem('zouin_is_admin', result.isAdmin ? 'true' : 'false');
+                        window.isAdmin = !!result.isAdmin;
+                        console.log('管理者:', result.isAdmin);
                     }
                 } catch (error) {
                     console.error('所属情報取得エラー:', error);
