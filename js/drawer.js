@@ -221,8 +221,8 @@ function openDrawer(date, events) {
         adminBtn.id = 'adminRecruitBtn';
         adminBtn.type = 'button';
         const btnColor = isClosed ? '#34c759' : '#ff3b30';
-        const btnText = isClosed ? '▶ 募集を再開する' : '⬛ 募集完了にする';
-        adminBtn.style.cssText = `display:block;width:100%;padding:12px;margin:12px 0 0;border:2px solid ${btnColor};background:transparent;color:${btnColor};font-weight:700;font-size:14px;border-radius:8px;cursor:pointer;`;
+        const btnText = isClosed ? '▶ 募集を再開する' : '◼ 募集を終了する';
+        adminBtn.style.cssText = `display:block;width:100%;padding:14px;margin:12px 0 0;border:none;background:${btnColor};color:#fff;font-weight:700;font-size:15px;border-radius:12px;cursor:pointer;letter-spacing:0.5px;box-shadow:0 2px 8px ${btnColor}40;`;
         adminBtn.textContent = btnText;
         adminBtn.onclick = () => toggleRecruitment(eventKey, eventHall, !isClosed);
 
