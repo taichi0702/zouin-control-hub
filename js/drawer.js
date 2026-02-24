@@ -214,6 +214,8 @@ function openDrawer(date, events) {
     const staffHall = localStorage.getItem('zouin_staff_hall');
     const eventHall = event.hall || '';
 
+    console.log('管理者チェック:', { isAdmin, staffHall, eventHall, isClosed, match: eventHall === staffHall, eventKey });
+
     if (isAdmin && staffHall && eventHall === staffHall) {
         const adminBtn = document.createElement('button');
         adminBtn.id = 'adminRecruitBtn';
