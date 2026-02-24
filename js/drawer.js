@@ -201,7 +201,7 @@ function openDrawer(date, events) {
             <div style="font-size:16px;font-weight:700;color:#ff3b30;margin-bottom:4px;">募集は終了しました</div>
             <div style="font-size:13px;color:#888;">このイベントの募集は終了しています。</div>
         `;
-        const drawerBody = document.querySelector('.drawer-body');
+        const drawerBody = document.querySelector('.drawer-inner');
         drawerBody.appendChild(overlay);
     } else {
         // 募集中: フォームを表示
@@ -226,7 +226,7 @@ function openDrawer(date, events) {
         adminBtn.textContent = btnText;
         adminBtn.onclick = () => toggleRecruitment(eventKey, eventHall, !isClosed);
 
-        const drawerBody = document.querySelector('.drawer-body');
+        const drawerBody = document.querySelector('.drawer-inner');
         drawerBody.appendChild(adminBtn);
     }
 
