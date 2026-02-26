@@ -255,38 +255,109 @@
         </div>
     </div>
 
+    <!-- vConsole デバッグ用（LINEアプリ内でもコンソールが見える） -->
+    <script src="https://unpkg.com/vconsole@latest/dist/vconsole.min.js"></script>
+    <script>
+        // デバッグモード: URLに ?debug=1 があるか、常に有効
+        var vConsole = new window.VConsole();
+        console.log('=== LIFF デバッグ開始 ===');
+        console.log('UserAgent:', navigator.userAgent);
+        console.log('URL:', location.href);
+    </script>
+
     <script>
         const LIFF_ID = '2009077734-ikkJ1w1D';
         const GAS_URL = 'https://script.google.com/macros/s/AKfycbzfSgWz8ECzu5LYj6ImAQ9pLPwSTTnkv0Mw3BGdF7PDQuSbiTMcEdAtp2JBrG6Fd7mCiQ/exec';
 
         let lineProfile = null;
 
+        // ステータステキストを更新するヘルパー
+        function updateLoadingText(text) {
+            const el = document.querySelector('#loading .status-text');
+            if (el) el.textContent = text;
+        }
+
+        // JSONP方式でGAS APIを呼び出す（CORS回避）
+        function fetchFromGAS(params) {
+            return new Promise((resolve, reject) => {
+                const callbackName = 'liffCallback_' + Date.now();
+                const urlParams = new URLSearchParams(params);
+                urlParams.append('callback', callbackName);
+
+                window[callbackName] = function (data) {
+                    delete window[callbackName];
+                    if (script.parentNode) document.body.removeChild(script);
+                    resolve(data);
+                };
+
+                const script = document.createElement('script');
+                script.src = `${GAS_URL}?${urlParams.toString()}`;
+                script.onerror = function () {
+                    delete window[callbackName];
+                    if (script.parentNode) document.body.removeChild(script);
+                    reject(new Error('ネットワークエラー'));
+                };
+
+                setTimeout(() => {
+                    if (window[callbackName]) {
+                        delete window[callbackName];
+                        if (script.parentNode) document.body.removeChild(script);
+                        reject(new Error('タイムアウト（15秒）'));
+                    }
+                }, 15000);
+
+                document.body.appendChild(script);
+            });
+        }
+
         async function initializeLiff() {
             try {
-                await liff.init({ liffId: LIFF_ID });
+                console.log('[1/5] liff.init 開始... LIFF_ID:', LIFF_ID);
+                updateLoadingText('LIFF SDK を初期化中...');
+
+                // タイムアウト付きでliff.initを実行
+                const initPromise = liff.init({ liffId: LIFF_ID });
+                const timeoutPromise = new Promise((_, reject) =>
+                    setTimeout(() => reject(new Error('liff.init がタイムアウトしました（15秒）。LIFF IDが正しいか、LINEアプリ内で開いているか確認してください。')), 15000)
+                );
+
+                await Promise.race([initPromise, timeoutPromise]);
+                console.log('[2/5] liff.init 完了');
 
                 // LINEアプリ内かチェック
-                if (!liff.isInClient()) {
+                const isInClient = liff.isInClient();
+                console.log('[3/5] isInClient:', isInClient);
+                updateLoadingText('LINE環境を確認中...');
+
+                if (!isInClient) {
+                    console.log('→ LINEアプリ外からのアクセス');
                     showNotInLine();
                     return;
                 }
 
                 // ログインチェック
-                if (!liff.isLoggedIn()) {
+                const isLoggedIn = liff.isLoggedIn();
+                console.log('[4/5] isLoggedIn:', isLoggedIn);
+
+                if (!isLoggedIn) {
+                    console.log('→ 未ログイン、liff.login() を呼び出し');
+                    updateLoadingText('LINEログイン中...');
                     liff.login();
                     return;
                 }
 
                 // プロフィール取得
+                console.log('[5/5] getProfile 開始...');
+                updateLoadingText('プロフィールを取得中...');
                 lineProfile = await liff.getProfile();
-                console.log('Profile:', lineProfile);
+                console.log('[5/5] getProfile 完了:', JSON.stringify(lineProfile));
 
                 // メールアドレス入力フォームを表示
                 showEmailForm(lineProfile);
 
             } catch (error) {
-                console.error('LIFF Error:', error);
-                showError(error.message);
+                console.error('LIFF初期化エラー:', error);
+                showError(error.message || String(error));
             }
         }
 
@@ -326,15 +397,16 @@
             submitBtn.innerHTML = '<span class="spinner"></span>連携中...';
 
             try {
-                const params = new URLSearchParams({
+                console.log('linkLineToEmail 呼び出し中...');
+
+                const result = await fetchFromGAS({
                     action: 'linkLineToEmail',
                     lineUid: lineProfile.userId,
                     lineDisplayName: lineProfile.displayName,
                     email: email
                 });
 
-                const response = await fetch(`${GAS_URL}?${params.toString()}`);
-                const result = await response.json();
+                console.log('linkLineToEmail 結果:', JSON.stringify(result));
 
                 if (result.success && result.linked) {
                     showSuccess();
@@ -347,7 +419,7 @@
                     throw new Error(result.error || '連携に失敗しました');
                 }
             } catch (error) {
-                console.error('Error:', error);
+                console.error('連携エラー:', error);
                 formError.textContent = error.message;
                 formError.classList.remove('hidden');
                 submitBtn.disabled = false;
